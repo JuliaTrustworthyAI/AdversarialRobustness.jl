@@ -17,13 +17,13 @@ loss(x, y) = logitcrossentropy(m(x), y)
 
 # SIMPLE ADVERSARIAL ATTACKS (obtained from https://github.com/jaypmorgan/Adversarial.jl/tree/master)
 
-function FGSM(model, loss, x, y; ϵ = 1, clamp_range = (-1, 1))
+function FGSM(model, loss, x, y; ϵ = 0.5, clamp_range = (-1, 1))
     J = gradient(() -> loss(x, y), Flux.params([x]))
     x_adv = clamp.(x .+ (Float32(ϵ) * sign.(J[x])), clamp_range...)
     return x_adv
 end
 
-function PGD(model, loss, x, y; ϵ = 1, step_size = 0.001, iterations = 100, clamp_range = (-1, 1))
+function PGD(model, loss, x, y; ϵ = 1, step_size = 0.01, iterations = 10, clamp_range = (-1, 1))
     x_adv = clamp.(x + (randn(Float32, size(x)...) * Float32(step_size)), clamp_range...); # start from the random point
     δ = Distances.chebyshev(x, x_adv)
     iteration = 1; while (δ < ϵ) && iteration <= iterations
@@ -127,14 +127,6 @@ function AutoPGD(model, x, y, iterations, ϵ, loss, ρ = 0.75, α = 0.75, clamp_
     return x_max
 end
 
-function FAB(model, x, y, restarts, iterations, α_max, β, η, ϵ, p)
-
-end
-
-function SquareAttack()
-
-end
-
 function plot_image(adv_example, clean_example, clean_pred_label, predicted_label, true_label)
     println("Digit predicted by the model for the clean image: ", clean_pred_label)
     println("Digit predicted by the model for the 
@@ -169,8 +161,8 @@ while adv_pred == real_pred
     index = rand(1:10000)
     real_example = x_train[:, index]
     true_label = y_train[index]
-    # adversarial_example = FGSM(m, loss, real_example, true_label)
-    adversarial_example = AutoPGD(m, real_example, true_label, 50, 8/255, loss)
+    adversarial_example = FGSM(m, loss, real_example, true_label)
+    # adversarial_example = AutoPGD(m, real_example, true_label, 100, 8/255, loss)
     # adversarial_example = PGD(m, loss, real_example, true_label)
     adv_pred = m(adversarial_example) |> Flux.onecold |> getindex
     real_pred = m(real_example) |> Flux.onecold |> getindex
