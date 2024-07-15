@@ -4,11 +4,17 @@ using Flux, Statistics, ProgressMeter, Distances
 using Flux.Data: DataLoader
 using Flux: onehotbatch, onecold, crossentropy, logitcrossentropy, mse, throttle, update!, push!
 
+# White-box Fast Gradient Sign Method (FGSM) attack by Goodfellow et al. (arxiv.org/abs/1412.6572)
+# Code adapted from (ggithub.com/jaypmorgan/Adversarial.jl)
+
 function FGSM(model, loss, x, y; ϵ = 0.3, clamp_range = (0, 1))
     grads = gradient(x -> loss(model(x), y), x)[1]
     x_adv = clamp.(x + (Float32(ϵ) * sign.(grads)), clamp_range...)
     return x_adv
 end
+
+# White-box Projected Gradient Descent (PGD) attack by Madry et al. (arxiv.org/abs/1706.06083)
+# Code adapted from (github.com/jaypmorgan/Adversarial.jl)
 
 function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, clamp_range = (0, 1))
     x_adv = clamp.(x + (randn(Float32, size(x)...) * Float32(step_size)), clamp_range...); # start from the random point
@@ -21,7 +27,10 @@ function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, cla
     return x_adv
 end
 
-# Selection of p for SquareAttack
+
+# Helper functions for the Square Attack
+
+# Selection of p for Square Attack
 function p_selection(p_init, it, n_iters)
     scaled_it = Int(round(it / n_iters * 10000))
 
@@ -50,6 +59,8 @@ function p_selection(p_init, it, n_iters)
     return p
 end
 
+# Margin loss: L(f(x̂), p) = fₚ(x̂) − max(fₖ(x̂)) s.t k≠p
+
 function margin_loss(logits, y)
     y = onehotbatch(y, 0:9) 
     preds_correct_class = sum(logits.*y, dims=1)
@@ -59,9 +70,15 @@ function margin_loss(logits, y)
     return margin
 end
 
+# Regular logitcrossentropy without aggregating. Useful for targeted Square Attack
+
 function cross_entropy_loss(logits, y)
     return -sum(onehotbatch(y, 0:9) .* logsoftmax(logits; dims=1); dims=1)
 end
+
+# One of the conditions to apply the delta changes according to Andriuschenko et al. but not in advertorch
+# Commented out in the actual method
+# They describe it as: prevent trying out a delta if it doesn't change x_curr (e.g. an overlapping patch)
 
 function check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, s, c, i_img, min_val, max_val)
     δ_window = δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
@@ -71,8 +88,10 @@ function check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, 
     return length(indices) == c * s * s
 end
 
+# The black-box Square Attack developed by Andriuschenko et al. (https://link.springer.com/chapter/10.1007/978-3-030-58592-1_29)
+
 function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, verbose)
-    Random.seed!(1)
+    Random.seed!(0)
     w, h, c, n_ex_total = size(x)
     n_features = c*h*w
 
@@ -81,11 +100,8 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, ver
     init_δ_extended = repeat(init_δ, 1, h, 1, 1)
     x_best = clamp.((init_δ_extended + x), min_val, max_val)
 
-    copylol = deepcopy(x_best)
-    x_topass = reshape(copylol, w*h, n_ex_total) # TODO: change soon, currently passes into direct models with no conv layers
-
-    logits = model(x_topass)
-    loss_min = cross_entropy_loss(logits, y)
+    logits = model(x_best)
+    loss_min = margin_loss(logits, y)
     margin_min = margin_loss(logits, y)
     n_queries = ones(Float64, n_ex_total)
 
@@ -104,7 +120,7 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, ver
 
         # Nothing to fool - all datapoints misclassified
         if length(idx_to_fool) == 0
-            println("attack successful!")
+            println("attack successful! All datapoints in this batch are now misclassified")
             break
         end
 
@@ -120,14 +136,16 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, ver
             center_h = rand(1:(h - s))
             center_w = rand(1:(w - s))
 
-            # x_curr_window = x_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
-            # x_best_curr_window = x_best_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
+            # values = rand([-2ϵ, 2ϵ], c)
+            values = rand([-ϵ, ϵ], c)
 
-            random_choices = rand([0, 1], c)
-            values = (random_choices .* 2 .- 1) .* ϵ 
-
+            # -1 because 
             δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img] .= values 
 
+            # In the SquareAttack paper's actual code but not in advertorch so commenting out for now
+
+            # x_curr_window = x_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
+            # x_best_curr_window = x_best_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
             # while check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, s, c, i_img, min_val, max_val)
             #     while_entries += 1
             #     random_choices = rand([0, 1], c)
@@ -137,22 +155,13 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, ver
         end
 
         x_new = clamp.(x_curr + δ, min_val, max_val)
-        copylol = deepcopy(x_new)
-        x_topass = reshape(copylol, w*h, n_ex_total) # TODO: change soon, currently passes into direct models with no conv layers
 
-        logits = model(x_topass)
-        loss = cross_entropy_loss(logits, y_curr)
+        logits = model(x_new)
+        loss = margin_loss(logits, y_curr)
         margin = margin_loss(logits, y_curr)
 
         idx_improved = findall(x -> loss[x] < loss_min_curr[x], 1:n_ex_total)
         times_it_actually_improved += length(idx_improved)
-
-        if length(idx_improved) > 0 && verbose
-            println("Square modification caused a better loss here!")
-            println("iteration: ", iteration)
-            println("index improved by Square: ", idx_improved)
-            println("side length to achieve this: ", s)
-        end
 
         for i in idx_to_fool
             if in(i, idx_improved)
@@ -167,10 +176,6 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, ver
         end
 
         n_queries[idx_to_fool] .+= 1
-    end
-
-    if verbose
-        println("times_it_actually_improved: ", times_it_actually_improved)
     end
 
     return x_best, n_queries

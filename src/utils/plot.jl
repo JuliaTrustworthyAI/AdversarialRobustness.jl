@@ -13,8 +13,8 @@ function plot_mnist_image(adv_example, clean_example, clean_pred_label, adv_pred
     clean_img_matrix = reshape(clean_example, 28, 28)
     clean_img_matrix = reverse(permutedims(clean_img_matrix, [2, 1]), dims=1)
     hms = []
-    push!(hms, heatmap(image_matrix, color=:grays, axis=false, title="Adversarial example: $true_label -> $adv_predicted_label"))
     push!(hms, heatmap(clean_img_matrix, color=:grays, axis=false, title="Clean example: $true_label -> $clean_pred_label"))
+    push!(hms, heatmap(image_matrix, color=:grays, axis=false, title="Adv example: $true_label -> $adv_predicted_label"))
     plot(hms..., layout=(1, 2), colorbar=false)
 end 
 
