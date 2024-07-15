@@ -71,32 +71,36 @@ function check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, 
     return length(indices) == c * s * s
 end
 
-function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val)
+function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val, verbose)
     Random.seed!(1)
     w, h, c, n_ex_total = size(x)
     n_features = c*h*w
-    println(n_features)
 
-    # Initialization (stripes of +eps or -eps)
+    # Initialization (stripes of +/-ϵ)
     init_δ = rand(w, 1, c, n_ex_total) .|> x -> x < 0.5 ? -ϵ : ϵ
     init_δ_extended = repeat(init_δ, 1, h, 1, 1)
     x_best = clamp.((init_δ_extended + x), min_val, max_val)
 
     copylol = deepcopy(x_best)
-    x_topass = reshape(copylol, 784, 10)
+    x_topass = reshape(copylol, w*h, n_ex_total) # TODO: change soon, currently passes into direct models with no conv layers
 
     logits = model(x_topass)
     loss_min = cross_entropy_loss(logits, y)
     margin_min = margin_loss(logits, y)
     n_queries = ones(Float64, n_ex_total)
 
-    # println("loss: ", loss_min)
-
-    while_entries = 0
     times_it_actually_improved = 0
 
     for iteration = 1:iterations
         idx_to_fool = findall(x -> margin_min[x] > 0, 1:n_ex_total) # attacking images that are predicted correctly
+
+        if iteration == 1 && verbose
+            println("n_ex_total: ", n_ex_total)
+            println("preds: ", (onecold(logits) .- 1))
+            println("margin mins: ", margin_min)
+            println("indexes chosen to fool: ", idx_to_fool)
+            println()
+        end
 
         # Nothing to fool - all datapoints misclassified
         if length(idx_to_fool) == 0
@@ -109,40 +113,20 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val)
         δ = x_best_curr .- x_curr
 
         p = p_selection(p_init, iteration, iterations)
-
-        # if iteration == 100
-        #     println(p)
-        # end
-
-        show = true
+        s = Int(round(sqrt(p * n_features/c)))
+        s = min(max(s, 1), h)
 
         for i_img in idx_to_fool
-            s = Int(round(sqrt(p * n_features/c)))
-            s = min(max(s, 1), h)
-            
-            center_h = rand(1:(h - s ))
-            center_w = rand(1:(w - s ))
+            center_h = rand(1:(h - s))
+            center_w = rand(1:(w - s))
 
-            x_curr_window = x_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
-            x_best_curr_window = x_best_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
+            # x_curr_window = x_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
+            # x_best_curr_window = x_best_curr[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
 
             random_choices = rand([0, 1], c)
             values = (random_choices .* 2 .- 1) .* ϵ 
-            # if iteration == 1 && show
-            #     println("value: ",values)
-            # end
 
             δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img] .= values 
-
-            # if show && iteration == 1
-            #     # println(δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img])
-            #     println("side length = ", s)
-            #     println("p = ", p)
-            #     println("step 1: ", Int(round(sqrt(p * n_features/c))))
-            #     println("step 2: ", min(max(s, 1), h))
-            #     println(size(δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]))
-            #     show = false
-            # end
 
             # while check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, s, c, i_img, min_val, max_val)
             #     while_entries += 1
@@ -154,7 +138,7 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val)
 
         x_new = clamp.(x_curr + δ, min_val, max_val)
         copylol = deepcopy(x_new)
-        x_topass = reshape(copylol, 784, n_ex_total)
+        x_topass = reshape(copylol, w*h, n_ex_total) # TODO: change soon, currently passes into direct models with no conv layers
 
         logits = model(x_topass)
         loss = cross_entropy_loss(logits, y_curr)
@@ -163,9 +147,11 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val)
         idx_improved = findall(x -> loss[x] < loss_min_curr[x], 1:n_ex_total)
         times_it_actually_improved += length(idx_improved)
 
-        if iteration == 1
-            println("loss: ", loss)
-            println("index improved size: ", idx_improved)
+        if length(idx_improved) > 0 && verbose
+            println("Square modification caused a better loss here!")
+            println("iteration: ", iteration)
+            println("index improved by Square: ", idx_improved)
+            println("side length to achieve this: ", s)
         end
 
         for i in idx_to_fool
@@ -183,7 +169,9 @@ function SquareAttack(model, x, y, iterations, p_init, ϵ, min_val, max_val)
         n_queries[idx_to_fool] .+= 1
     end
 
-    println(while_entries)
-    println("times_it_actually_improved: ", times_it_actually_improved)
+    if verbose
+        println("times_it_actually_improved: ", times_it_actually_improved)
+    end
+
     return x_best, n_queries
 end
