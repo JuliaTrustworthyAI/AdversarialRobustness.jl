@@ -1,37 +1,39 @@
 using Distributions
 using Random
-using Flux, Statistics, ProgressMeter, Distances
-using Flux.Data: DataLoader
-using Flux: jacobian, onehotbatch, onecold, crossentropy, logitcrossentropy, mse, throttle, update!, push!
+using Flux, Statistics, Distances
+using Flux: onehotbatch, onecold
 
 # White-box Fast Gradient Sign Method (FGSM) attack by Goodfellow et al. (arxiv.org/abs/1412.6572)
 # Code adapted from (github.com/jaypmorgan/Adversarial.jl)
 function FGSM(model, loss, x, y; ϵ = 0.3, min_label=0, max_label=9, clamp_range = (0, 1))
     batch_size = size(x)[4]
+    x_adv = deepcopy(x)
     for i = 1:batch_size
-        x_curr = x[:, :, :, i]
+        x_curr = x_adv[:, :, :, i]
         x_curr = reshape(x_curr, 28, 28, 1, 1)
         grads = gradient(x_curr -> loss(model(x_curr), y[i]; min_label=min_label, max_label=max_label)[1], x_curr)[1]
-        # println("shape of x_curr: ", size(x_curr))
-        # println("sign grads: ", size(sign.(grads)))
-        # println("size of grads: ", size(grads))
-        # println("eps: ", ϵ)
-        # println(x_curr .+ (ϵ .* sign.(grads)))
         x_curr_adv = clamp.(x_curr .+ (ϵ[i] .* sign.(grads)), clamp_range...)
-        x[:, :, :, i] = x_curr_adv
+        x_adv[:, :, :, i] = x_curr_adv
     end
-    return x
+    return x_adv
 end
 
 # White-box Projected Gradient Descent (PGD) attack by Madry et al. (arxiv.org/abs/1706.06083)
 # Code adapted from (github.com/jaypmorgan/Adversarial.jl)
-function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, min_label, max_label, clamp_range = (0, 1))
-    x_adv = clamp.(x + (randn(Float32, size(x)...) * Float32(step_size)), clamp_range...); # start from the random point
-    δ = chebyshev(x, x_adv)
-    iteration = 1; while (δ < ϵ) && iteration <= iterations
-        x_adv = FGSM(model, loss, x_adv, y; ϵ = step_size, min_label=min_label, max_label=max_label, clamp_range = clamp_range)
-        δ = chebyshev(x, x_adv)
-        iteration += 1
+function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, min_label=0, max_label=9, clamp_range = (0, 1))
+    batch_size = size(x)[4]
+    x_adv = deepcopy(x)
+    for i = 1:batch_size
+        x_curr = x_adv[:, :, :, i]
+        x_curr = reshape(x_curr, 28, 28, 1, 1)
+        x_curr_adv = clamp.(x_curr + (randn(Float32, size(x_curr)...) * Float32(step_size)), clamp_range...); # start from the random point
+        δ = chebyshev(x_curr, x_curr_adv)
+        iteration = 1; while (δ < ϵ) && iteration <= iterations
+            x_curr_adv = FGSM(model, loss, x_curr_adv, y; ϵ = step_size, min_label=min_label, max_label=max_label, clamp_range = clamp_range)
+            δ = chebyshev(x_curr, x_curr_adv)
+            iteration += 1
+        end
+        x_adv[:, :, :, i] = x_curr_adv
     end
     return x_adv
 end
