@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - packageify
     tags: ['*']
   pull_request:
   workflow_dispatch:
