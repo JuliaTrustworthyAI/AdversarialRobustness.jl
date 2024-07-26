@@ -1,9 +1,5 @@
 module AdversarialRobustness
 
-# Element-wise cross-entropy loss
-include("attacks/common_utils.jl")
-export cross_entropy_loss
-
 # Attack algorithms supported
 include("attacks/autopgd/autopgd.jl")
 export AutoPGD
@@ -16,6 +12,8 @@ export FGSM
 
 include("attacks/pgd/pgd.jl")
 export PGD
+
+include("attacks/common_utils.jl")
 
 # Adversarial training
 include("training/adversarial_training.jl")

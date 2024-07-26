@@ -322,15 +322,3 @@ function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=
     end
     return x_max, η_list, checkpoints, starts_updated
 end
-            
-
-
- 
-
-
-
-
-
-
-
-

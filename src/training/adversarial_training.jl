@@ -2,9 +2,6 @@ using Flux, Statistics, ProgressMeter
 using Flux.Data: DataLoader
 using Flux: onehotbatch, onecold, crossentropy, logitcrossentropy, mse, throttle, update!, push!
 
-include("../attacks/fgsm/fgsm.jl")
-include("../attacks/pgd/pgd.jl")
-
 function vanilla_train(model, x_train, y_train, max_epochs, batch_size; loss=logitcrossentropy, opt=Adam, min_label=0, max_label=9)
     θ = Flux.params(model)
     vanilla_losses = []
