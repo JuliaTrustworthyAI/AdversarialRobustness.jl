@@ -20,7 +20,6 @@ end
 # Condition 1 to halve η and restart from best point
 # Returns indices for which the update step has increased f less than ρ * (total update steps since last checkpoint) times
 function condition_1(f_list, curr_checkpoint, prev_checkpoint, ρ)
-    # update_freqs = zeros(Float64, n_ex_total)
     update_freqs = 0
     for i = prev_checkpoint+1:curr_checkpoint-1
         if f_list[i] > f_list[i-1]
@@ -37,5 +36,4 @@ end
 # Returns indices for which no changes happened t 
 function condition_2(η_list, f_max_list, curr_ckp_idx, prev_ckp_idx)
     return (η_list[curr_ckp_idx] == η_list[prev_ckp_idx]) && (f_max_list[curr_ckp_idx] == f_max_list[prev_ckp_idx])
-    # return findall(x -> (η_list[curr_ckp_idx][x] == η_list[prev_ckp_idx][x]) && (f_max_list[curr_ckp_idx][x] == f_max_list[prev_ckp_idx][x]), 1:n_ex_total)
 end

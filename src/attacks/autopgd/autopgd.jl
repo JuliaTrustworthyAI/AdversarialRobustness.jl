@@ -8,11 +8,9 @@ include("utils.jl")
 # White-box Auto Projected Gradient Descent: A parameter-free version of PGD (arxiv.org/pdf/2003.01690)
 # The only free parameter is the budget: iterations. α and ρ are both set to 0.75 as specified by the authors
 function AutoPGD(model, x, y, iterations; ϵ=0.3, min_label=0, max_label=9, verbose=false, α=0.75, ρ=0.75, clamp_range = (0, 1))
-    # w, h, c, n_ex_total = size(x)
     w, h, c = size(x)
 
     # initializing step size
-    # η = ones(Float64, n_ex_total) .* 2ϵ
     η = 2ϵ
     η_list = []
     push!(η_list, η)
