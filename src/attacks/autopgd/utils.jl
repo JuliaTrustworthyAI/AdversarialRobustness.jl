@@ -7,14 +7,14 @@ using Flux: onehotbatch, onecold
 
 # Targeted Difference of Logits Ratio (DLR) loss
 function targeted_dlr_loss(logits, y, target)
-    zy = logits[y, :]
-    zt = logits[target, :]
-    sorted_logits = sort(logits, dims=1, rev=true)
-    zπ1 = sorted_logits[1, :]
-    zπ3 = sorted_logits[3, :]
-    zπ4 = sorted_logits[4, :]
+    zy = logits[y+1]
+    zt = logits[target+1]
+    sorted_logits = sort(reshape(logits, 10), rev=true)
+    zπ1 = sorted_logits[1]
+    zπ3 = sorted_logits[3]
+    zπ4 = sorted_logits[4]
 
-    return -((zy .- zt) ./ (zπ1 .- ((zπ3 .+ zπ4) ./ 2)))
+    return -((zy - zt) / (zπ1 - ((zπ3 + zπ4) / 2)))
 end
 
 # Condition 1 to halve η and restart from best point

@@ -7,7 +7,7 @@ include("utils.jl")
 
 # White-box Auto Projected Gradient Descent: A parameter-free version of PGD (arxiv.org/pdf/2003.01690)
 # The only free parameter is the budget: iterations. α and ρ are both set to 0.75 as specified by the authors
-function AutoPGD(model, x, y, iterations; ϵ=0.3, min_label=0, max_label=9, verbose=false, α=0.75, ρ=0.75, clamp_range = (0, 1))
+function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_label=9, verbose=false, α=0.75, ρ=0.75, clamp_range = (0, 1))
     w, h, c = size(x)
 
     # initializing step size
@@ -33,8 +33,17 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, min_label=0, max_label=9, verb
     topass_x_0 = reshape(topass_x_0, w, h, c, 1)
     topass_x_1 = deepcopy(x_1)
     topass_x_1 = reshape(topass_x_1, w, h, c, 1)
-    f_0 = logitcrossentropy(model(topass_x_0), onehotbatch(y, min_label:max_label))
-    f_1 = logitcrossentropy(model(topass_x_1), onehotbatch(y, min_label:max_label))
+
+    logits_0 = model(topass_x_0)
+    logits_1 = model(topass_x_1)
+
+    f_0 = logitcrossentropy(logits_0, onehotbatch(y, min_label:max_label))
+    f_1 = logitcrossentropy(logits_1, onehotbatch(y, min_label:max_label))
+
+    if target > -1
+        f_0 = targeted_dlr_loss(logits_0, y, target)
+        f_1 = targeted_dlr_loss(logits_1, y, target)
+    end
 
     f_max = max(f_0, f_1)
     f_max_list = []
@@ -63,8 +72,15 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, min_label=0, max_label=9, verb
 
         topass_xkp1 = deepcopy(x_k_p_1)
         topass_xkp1 = reshape(topass_xkp1, w, h, c, 1)
+
+        logits_xkp1 = model(topass_xkp1)
         
-        f_x_k_p_1 = logitcrossentropy(model(topass_xkp1), onehotbatch(y, min_label:max_label))
+        f_x_k_p_1 = logitcrossentropy(logits_xkp1, onehotbatch(y, min_label:max_label))
+
+        if target > -1
+            f_x_k_p_1 = targeted_dlr_loss(logits_xkp1, y, target)
+        end
+        
         push!(f_list, f_x_k_p_1)
 
         # Updating maximum loss

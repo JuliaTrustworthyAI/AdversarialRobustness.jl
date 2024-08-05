@@ -28,17 +28,19 @@ idx = rand(1:1000)
 X_try = X[:, :, :, idx]
 y_try = y[idx]
 
-x_best_fgsm = FGSM(model, X_try, y_try; ϵ = 0.2)
+target = 1
+
+# x_best_fgsm = FGSM(model, X_try, y_try; ϵ = 0.2)
 # x_best_pgd = PGD(model, X_try, y_try; ϵ = 0.3, step_size=0.02, iterations=40)
 # x_best_square, n_queries = SquareAttack(model, X_try, y_try, 5000; ϵ = 0.3, verbose=true)
-# x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(model, X_try, y_try, 100; ϵ = 0.1)
+x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(model, X_try, y_try, 100; ϵ = 0.2, target=target)
 
-println(extrema(x_best_fgsm .- X_try))
+println(extrema(x_best_autopgd .- X_try))
 
-attack_to_use = x_best_fgsm
+# attack_to_use = x_best_fgsm
 # attack_to_use = x_best_pgd
 # attack_to_use = x_best_square
-# attack_to_use = x_best_autopgd
+attack_to_use = x_best_autopgd
 
 clean_img = X_try[:, :, :, 1:1]
 adv_img = attack_to_use[:, :, :, 1:1]
@@ -55,3 +57,5 @@ true_label = y_try
 # println("starts_updated: ", starts_updated)
 # println("n_queries: ", n_queries)
 plot_mnist_image(adv_img, clean_img, clean_pred_label, adv_pred_label, true_label)
+# difference = adv_img .- clean_img
+# plot_mnist_image(difference, clean_img, clean_pred_label, adv_pred_label, true_label)

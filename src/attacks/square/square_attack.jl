@@ -29,14 +29,13 @@ function SquareAttack(model, x, y, iterations; ϵ=0.3, p_init=0.8, min_label=0, 
         fooled = margin_min[1] < 0
 
         if iteration == 1 && verbose
-            # println("n_ex_total: ", n_ex_total)
             println("preds: ", (onecold(logits) .- 1))
             println("margin min: ", margin_min)
             println("fooled? ", fooled)
             println()
         end
 
-        # Nothing to fool - all datapoints misclassified
+        # Data point misclassified
         if fooled
             break
         end
