@@ -32,7 +32,7 @@ function vanilla_train(model, x_train, y_train, max_epochs, batch_size; loss=log
     return vanilla_losses
 end
 
-function adversarial_train(model, x_train, y_train, epochs, batch_size, ϵ; loss=logitcrossentropy, opt=ADAM, step_size = 0.03, iterations = 10, attack_method = :FGSM, min_label=0, max_label=9, clamp_range=(0, 1))
+function adversarial_train(model, x_train, y_train, epochs, batch_size, ϵ; loss=logitcrossentropy, opt=ADAM, step_size = 0.03, iterations = 5, attack_method = :FGSM, min_label=0, max_label=9, clamp_range=(0, 1))
     adv_losses = []
     θ = Flux.params(model)
     train_loader = DataLoader((x_train , y_train), batchsize=batch_size, shuffle=true)
