@@ -10,8 +10,8 @@ include("utils.jl")
 function AutoPGD(
     model,
     x,
-    y,
-    iterations;
+    y;
+    iterations=10,
     ϵ = 0.3,
     target = -1,
     min_label = 0,

@@ -1,19 +1,12 @@
 module AdversarialRobustness
 
 # Attack algorithms supported
-include("attacks/autopgd/autopgd.jl")
+include("attacks/attacks.jl")
 export AutoPGD
-
-include("attacks/square/square_attack.jl")
 export SquareAttack
-
-include("attacks/fgsm/fgsm.jl")
 export FGSM
-
-include("attacks/pgd/pgd.jl")
 export PGD
-
-include("attacks/common_utils.jl")
+export attack, attack!, available_attacks
 
 # Adversarial training
 include("training/adversarial_training.jl")
