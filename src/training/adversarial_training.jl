@@ -12,9 +12,9 @@ function vanilla_train(model, x_train, y_train, max_epochs, batch_size; loss=log
         epoch_loss = 0.0
 
         for (idx, (x, y)) in enumerate(train_loader)
-            # println("Batch: $idx")
+            println("Batch: $idx")
             local l;
-            y_onehot = onehotbatch(y, label_min:label_max)
+            y_onehot = onehotbatch(y, min_label:max_label)
             grads = Flux.gradient(θ) do 
                 l = loss(model(x), y_onehot)    
             end
