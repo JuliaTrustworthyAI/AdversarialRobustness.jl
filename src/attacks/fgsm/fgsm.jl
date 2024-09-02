@@ -15,8 +15,7 @@ function FGSM(
     ϵ = 0.3,
     clamp_range = (0, 1),
 )
-    x_adv = deepcopy(x)
-    x_adv = reshape(x_adv, size(x)..., 1)
+    x_adv = reshape(x, size(x)..., 1)
     grads = gradient(
         x_adv -> loss(model(x_adv), y),
         x_adv,

@@ -33,7 +33,7 @@ opt_state = Flux.setup(rule, model)
 
                 # Attack the input:
                 println("Attacking input: $input")
-                attack!(attack_type, input, label, _model, loss)
+                input = attack(attack_type, input, label, _model, loss)
                 println("Perturbed input: $input")
 
                 # Calculate the gradient of the objective

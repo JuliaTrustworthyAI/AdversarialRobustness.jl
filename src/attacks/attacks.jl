@@ -17,7 +17,7 @@ const available_attacks = [
 Attacks the `model` on input `x` with label `y` using the attack `type`.
 """
 function attack(type::Function, x, y, model, loss; kwargs...)
-    return type(x, y, model; loss=loss, kwargs...)
+    return type(model, x, y; loss = loss, kwargs...)
 end
 
 """
@@ -26,5 +26,6 @@ end
 Attacks the `model` on input `x` with label `y` using the attack `type` in-place.
 """
 function attack!(type::Function, x, y, model, loss; kwargs...)
-    return attack(type, x, y, model, loss; kwargs...)
+    x = attack(type, x, y, model, loss; kwargs...)
+    return x
 end
