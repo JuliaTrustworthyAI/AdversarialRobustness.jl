@@ -8,7 +8,7 @@ include("autopgd/autopgd.jl")
 const available_attacks = [
     FGSM,
     PGD,
-    AutoPGD
+    # AutoPGD,
 ]
 
 """

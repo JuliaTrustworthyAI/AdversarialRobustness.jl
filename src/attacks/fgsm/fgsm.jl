@@ -15,7 +15,7 @@ function FGSM(
     ϵ = 0.3,
     clamp_range = (0, 1),
 )
-    x_adv = reshape(x, size(x)..., 1)
+    x_adv = reshape(x, size(x)..., 1)       # why is this necessary @rithik83?
     grads = gradient(
         x_adv -> loss(model(x_adv), y),
         x_adv,

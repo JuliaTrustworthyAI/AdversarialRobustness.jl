@@ -21,7 +21,6 @@ function AutoPGD(
     ρ = 0.75,
     clamp_range = (0, 1),
 )
-    w, h, c = size(x)
 
     # initializing step size
     η = 2ϵ
@@ -56,9 +55,9 @@ function AutoPGD(
         )
 
     topass_x_0 = deepcopy(x)
-    topass_x_0 = reshape(topass_x_0, w, h, c, 1)
+    topass_x_0 = reshape(topass_x_0, size(x)..., 1)
     topass_x_1 = deepcopy(x_1)
-    topass_x_1 = reshape(topass_x_1, w, h, c, 1)
+    topass_x_1 = reshape(topass_x_1, size(x)..., 1)
 
     logits_0 = model(topass_x_0)
     logits_1 = model(topass_x_1)
@@ -118,7 +117,7 @@ function AutoPGD(
             )
 
         topass_xkp1 = deepcopy(x_k_p_1)
-        topass_xkp1 = reshape(topass_xkp1, w, h, c, 1)
+        topass_xkp1 = reshape(topass_xkp1, size(x)..., 1)
 
         logits_xkp1 = model(topass_xkp1)
 
