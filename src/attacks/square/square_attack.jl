@@ -7,10 +7,21 @@ include("utils.jl")
 
 # The black-box Square Attack developed by Andriuschenko et al. (https://link.springer.com/chapter/10.1007/978-3-030-58592-1_29)
 # The only free variable is the budget: iterations
-function SquareAttack(model, x, y, iterations; ϵ=0.3, p_init=0.8, min_label=0, max_label=9, verbose=false, clamp_range = (0, 1))
+function SquareAttack(
+    model,
+    x,
+    y,
+    iterations;
+    ϵ = 0.3,
+    p_init = 0.8,
+    min_label = 0,
+    max_label = 9,
+    verbose = false,
+    clamp_range = (0, 1),
+)
     Random.seed!(0)
     w, h, c = size(x)
-    n_features = c*h*w
+    n_features = c * h * w
 
     # Initialization (stripes of +/-ϵ)
     init_δ = rand(w, 1, c) .|> x -> x < 0.5 ? -ϵ : ϵ
@@ -45,16 +56,16 @@ function SquareAttack(model, x, y, iterations; ϵ=0.3, p_init=0.8, min_label=0, 
         δ = x_best_curr .- x_curr
 
         p = p_selection(p_init, iteration, iterations)
-        s = Int(round(sqrt(p * n_features/c)))
+        s = Int(round(sqrt(p * n_features / c)))
         s = min(max(s, 1), h)
 
-        center_h = rand(1:(h - s))
-        center_w = rand(1:(w - s))
+        center_h = rand(1:(h-s))
+        center_w = rand(1:(w-s))
 
         # values = rand([-2ϵ, 2ϵ], c)
         values = rand([-ϵ, ϵ], c)
 
-        δ[center_w:center_w+s-1, center_h:center_h+s-1, :] .= values 
+        δ[center_w:center_w+s-1, center_h:center_h+s-1, :] .= values
 
         x_new = clamp.(x_curr .+ δ, clamp_range...)
 
