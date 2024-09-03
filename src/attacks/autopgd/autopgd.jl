@@ -1,7 +1,6 @@
 using Distributions
 using Random
 using Flux, Statistics, Distances
-using Flux: onehotbatch, onecold
 
 include("utils.jl")
 
@@ -16,10 +15,10 @@ function AutoPGD(
     target = -1,
     min_label = 0,
     max_label = 9,
-    verbose = false,
     α = 0.75,
     ρ = 0.75,
     clamp_range = (0, 1),
+    loss = nothing, 
 )
 
     # initializing step size
@@ -45,10 +44,8 @@ function AutoPGD(
                 model,
                 x_0,
                 y;
-                loss = cross_entropy_loss,
+                loss = loss,
                 ϵ = η,
-                min_label = min_label,
-                max_label = max_label,
                 clamp_range = (x_0 .- ϵ, x_0 .+ ϵ),
             ),
             clamp_range...,
@@ -62,8 +59,8 @@ function AutoPGD(
     logits_0 = model(topass_x_0)
     logits_1 = model(topass_x_1)
 
-    f_0 = logitcrossentropy(logits_0, onehotbatch(y, min_label:max_label))
-    f_1 = logitcrossentropy(logits_1, onehotbatch(y, min_label:max_label))
+    f_0 = logitcrossentropy(logits_0, y)
+    f_1 = logitcrossentropy(logits_1, y)
 
     if target > -1
         f_0 = targeted_dlr_loss(logits_0, y, target)
@@ -98,10 +95,8 @@ function AutoPGD(
                     model,
                     x_k,
                     y;
-                    loss = cross_entropy_loss,
+                    loss = loss,
                     ϵ = η,
-                    min_label = min_label,
-                    max_label = max_label,
                     clamp_range = (x_0 .- ϵ, x_0 .+ ϵ),
                 ),
                 clamp_range...,
@@ -121,7 +116,7 @@ function AutoPGD(
 
         logits_xkp1 = model(topass_xkp1)
 
-        f_x_k_p_1 = logitcrossentropy(logits_xkp1, onehotbatch(y, min_label:max_label))
+        f_x_k_p_1 = logitcrossentropy(logits_xkp1, y)
 
         if target > -1
             f_x_k_p_1 = targeted_dlr_loss(logits_xkp1, y, target)
@@ -159,5 +154,6 @@ function AutoPGD(
             x_list[k] = x_k_p_1
         end
     end
-    return x_max, η_list, checkpoints, starts_updated
+    # return x_max, η_list, checkpoints, starts_updated
+    return x_max
 end

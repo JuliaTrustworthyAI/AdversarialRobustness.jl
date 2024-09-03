@@ -8,7 +8,8 @@ include("autopgd/autopgd.jl")
 const available_attacks = [
     FGSM,
     PGD,
-    # AutoPGD,
+    AutoPGD,
+    # SquareAttack,
 ]
 
 """
@@ -17,15 +18,17 @@ const available_attacks = [
 Attacks the `model` on input `x` with label `y` using the attack `type`.
 """
 function attack(type::Function, x, y, model, loss; kwargs...)
-    return type(model, x, y; loss = loss, kwargs...)
+    x = type(model, x, y; loss = loss, kwargs...) |>
+        xadv -> convert.(eltype(x), xadv)
+    return x
 end
 
 """
-    attack!(x, y, model, type::Function; kwargs...)
+     attack!(type::Function, x, y, model, loss; kwargs...)
 
-Attacks the `model` on input `x` with label `y` using the attack `type` in-place.
+Attacks the `model` on input `x` with label `y` using the attack `type` in-place (i.e. argument `x` is mutated).
 """
 function attack!(type::Function, x, y, model, loss; kwargs...)
-    x = attack(type, x, y, model, loss; kwargs...)
+    x[:] = attack(type, x, y, model, loss; kwargs...)
     return x
 end

@@ -18,28 +18,26 @@ function PGD(
     clamp_range = (0, 1),
 )
 
-    x_curr = deepcopy(x)
-    x_curr = reshape(x_curr, size(x)..., 1)
-    x_curr_adv =
+    xadv =
         clamp.(
-            x_curr + (randn(Float32, size(x_curr)...) * Float32(step_size)),
+            x + (randn(Float32, size(x)...) * Float32(step_size)),
             clamp_range...,
         )
     iteration = 1
-    δ = chebyshev(x_curr, x_curr_adv)
+    δ = chebyshev(x, xadv)
 
     while (δ .< ϵ) && iteration <= iterations
-        x_curr_adv = FGSM(
+        xadv = FGSM(
             model,
-            x_curr_adv,
+            xadv,
             y;
             loss = loss,
             ϵ = step_size,
             clamp_range = clamp_range,
         )
         iteration += 1
-        δ = chebyshev(x_curr, x_curr_adv)
+        δ = chebyshev(x, xadv)
     end
 
-    return clamp.(x_curr_adv, x_curr .- ϵ, x_curr .+ ϵ)
+    return clamp.(xadv, x .- ϵ, x .+ ϵ)
 end

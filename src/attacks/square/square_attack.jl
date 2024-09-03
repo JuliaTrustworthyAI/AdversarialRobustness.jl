@@ -10,18 +10,18 @@ include("utils.jl")
 function SquareAttack(
     model,
     x,
-    y,
-    iterations;
+    y;
+    iterations = 10,
     ϵ = 0.3,
     p_init = 0.8,
     min_label = 0,
     max_label = 9,
     verbose = false,
     clamp_range = (0, 1),
+    loss = nothing,
 )
     Random.seed!(0)
-    w, h, c = size(x)
-    n_features = c * h * w
+    n_features = length(x)
 
     # Initialization (stripes of +/-ϵ)
     init_δ = rand(w, 1, c) .|> x -> x < 0.5 ? -ϵ : ϵ
@@ -29,7 +29,7 @@ function SquareAttack(
     x_best = clamp.((init_δ_extended + x), clamp_range...)
 
     topass_x_best = deepcopy(x_best)
-    topass_x_best = reshape(topass_x_best, w, h, c, 1)
+    topass_x_best = reshape(topass_x_best, size(x)..., 1)
 
     logits = model(topass_x_best)
     loss_min = margin_loss(logits, y, min_label, max_label)
@@ -70,7 +70,7 @@ function SquareAttack(
         x_new = clamp.(x_curr .+ δ, clamp_range...)
 
         topass_x_new = deepcopy(x_new)
-        topass_x_new = reshape(topass_x_new, w, h, c, 1)
+        topass_x_new = reshape(topass_x_new, size(x)..., 1)
 
         logits = model(topass_x_new)
         loss = margin_loss(logits, y_curr, min_label, max_label)
