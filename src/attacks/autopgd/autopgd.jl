@@ -7,7 +7,7 @@ include("utils.jl")
 
 # White-box Auto Projected Gradient Descent: A parameter-free version of PGD (arxiv.org/pdf/2003.01690)
 # The only free parameter is the budget: iterations. α and ρ are both set to 0.75 as specified by the authors
-function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_label=9, verbose=false, α=0.75, ρ=0.75, clamp_range = (0, 1))
+function AutoPGD(model, x, y, iterations; loss=logitcrossentropy, ϵ=0.3, target=-1, min_label=0, max_label=9, verbose=false, α=0.75, ρ=0.75, clamp_range = (0, 1))
     w, h, c = size(x)
 
     # initializing step size
@@ -27,7 +27,7 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_la
     end
 
     x_0 = deepcopy(x)
-    x_1 = clamp.(FGSM(model, x_0, y; loss=cross_entropy_loss, ϵ = η, min_label=min_label, max_label=max_label, clamp_range = (x_0 .- ϵ, x_0 .+ ϵ)), clamp_range...)
+    x_1 = clamp.(FGSM(model, x_0, y; loss=loss, ϵ = η, min_label=min_label, max_label=max_label, clamp_range = (x_0 .- ϵ, x_0 .+ ϵ)), clamp_range...)
 
     topass_x_0 = deepcopy(x)
     topass_x_0 = reshape(topass_x_0, w, h, c, 1)
@@ -37,8 +37,8 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_la
     logits_0 = model(topass_x_0)
     logits_1 = model(topass_x_1)
 
-    f_0 = logitcrossentropy(logits_0, onehotbatch(y, min_label:max_label))
-    f_1 = logitcrossentropy(logits_1, onehotbatch(y, min_label:max_label))
+    f_0 = logitcrossentropy(logits_0, y)
+    f_1 = logitcrossentropy(logits_1, y)
 
     if target > -1
         f_0 = targeted_dlr_loss(logits_0, y, target)
@@ -67,7 +67,7 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_la
         η = deepcopy(η_list[length(η_list)])
         x_k = deepcopy(x_list[k])
         x_k_m_1 = deepcopy(x_list[k-1])
-        z_k_p_1 = clamp.(FGSM(model, x_k, y; loss=cross_entropy_loss, ϵ = η, min_label=min_label, max_label=max_label, clamp_range = (x_0 .- ϵ, x_0 .+ ϵ)), clamp_range...)
+        z_k_p_1 = clamp.(FGSM(model, x_k, y; loss=loss, ϵ = η, min_label=min_label, max_label=max_label, clamp_range = (x_0 .- ϵ, x_0 .+ ϵ)), clamp_range...)
         x_k_p_1 = clamp.(clamp.((x_k + (α .* (z_k_p_1 .- x_k))) + ((1 - α) .* (x_k .- x_k_m_1)), x_0 .- ϵ, x_0 .+ ϵ), clamp_range...)
 
         topass_xkp1 = deepcopy(x_k_p_1)
@@ -75,7 +75,7 @@ function AutoPGD(model, x, y, iterations; ϵ=0.3, target=-1, min_label=0, max_la
 
         logits_xkp1 = model(topass_xkp1)
         
-        f_x_k_p_1 = logitcrossentropy(logits_xkp1, onehotbatch(y, min_label:max_label))
+        f_x_k_p_1 = logitcrossentropy(logits_xkp1, y)
 
         if target > -1
             f_x_k_p_1 = targeted_dlr_loss(logits_xkp1, y, target)

@@ -61,15 +61,15 @@ target = -1
 # Choose attack algorithm: FGSM, PGD, Square and AutoPGD available so far
 # x_best_fgsm = FGSM(model_to_use, X_try, y_try; ϵ = 0.2)
 # x_best_pgd = PGD(model_to_use, X_try, y_try; ϵ = 0.3, step_size=0.01, iterations=20)
-x_best_square, n_queries = SquareAttack(model_to_use, X_try, y_try, 5000; ϵ = 0.3, verbose=true)
-# x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(model_to_use, X_try, y_try, 100; ϵ = 0.2, target=target)
+# x_best_square, n_queries = SquareAttack(model_to_use, X_try, y_try, 5000; ϵ = 0.3, verbose=true)
+x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(model_to_use, X_try, y_try, 100; ϵ = 0.2, target=target)
 
 # attack_to_use = x_best_fgsm
 # attack_to_use = x_best_pgd
-attack_to_use = x_best_square
-# attack_to_use = x_best_autopgd
+# attack_to_use = x_best_square
+attack_to_use = x_best_autopgd
 
-println("queries for sq: ", n_queries)
+# println("queries for sq: ", n_queries)
 
 println(extrema(attack_to_use .- X_try))
 
