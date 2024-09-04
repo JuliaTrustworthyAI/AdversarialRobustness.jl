@@ -36,7 +36,7 @@ end
 
 # Margin loss: L(f(x̂), p) = fₚ(x̂) − max(fₖ(x̂)) s.t k≠p
 function margin_loss(logits, y, min_label, max_label)
-    y = onehotbatch(y, min_label:max_label) 
+    # y = onehotbatch(y, min_label:max_label) 
     preds_correct_class = sum(logits.*y, dims=1)
     diff = preds_correct_class .- logits
     diff[y] .= Inf

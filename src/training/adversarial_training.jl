@@ -32,28 +32,36 @@ function vanilla_train(model, x_train, y_train, max_epochs, batch_size; loss=log
     return vanilla_losses
 end
 
-function adversarial_train(model, x_train, y_train, epochs, batch_size, ϵ; loss=logitcrossentropy, opt=ADAM, step_size = 0.03, iterations = 5, attack_method = :FGSM, min_label=0, max_label=9, clamp_range=(0, 1))
+function adversarial_train(model, x_train, y_train, epochs, batch_size, ϵ; loss=logitcrossentropy, opt=ADAM, step_size = 0.03, iterations = 10, attack_method = :FGSM, min_label=0, max_label=9, clamp_range=(0, 1))
     adv_losses = []
     θ = Flux.params(model)
-    train_loader = DataLoader((x_train , y_train), batchsize=batch_size, shuffle=true)
+    train_loader = DataLoader((x_train , y_train), batchsize=batch_size, shuffle=true) |> gpu
+
+    iter = ceil(iterations/epochs)
+    iter_val = iterations/epochs
 
     @showprogress for epoch in 1:epochs
         println("Epoch: $epoch")
+        println("number of iterations for PGD: ", iter)
         epoch_loss = 0.0
 
         for (idx, (x, y)) in enumerate(train_loader)
-            println("batch ", idx)
+            if idx % 100 == 0
+                println("batch ", idx)
+            end
             y_onehot = onehotbatch(y, min_label:max_label)
             x_adv = zeros(size(x))
 
             if attack_method == :FGSM
-                for i = 1:size(x)[4]
-                    x_adv[:, :, :, i] = FGSM(model, x[:, :, :, i], y[i]; ϵ = ϵ)
-                end
+                x_adv = FGSM(model, x, y_onehot; ϵ = ϵ, loss=loss)
+                # for i = 1:size(x)[4]
+                #     x_adv[:, :, :, i] = FGSM(model, x[:, :, :, i], y[i]; ϵ = ϵ, loss=attack_loss)
+                # end
             elseif attack_method == :PGD
-                for i = 1:size(x)[4]
-                    x_adv[:, :, :, i] = PGD(model, x[:, :, :, i], y[i]; ϵ = ϵ, step_size=step_size, iterations=iterations)
-                end
+                x_adv = PGD(model, x, y_onehot; ϵ = ϵ, loss=loss, step_size=step_size, iterations=iter)
+                # for i = 1:size(x)[4]
+                #     x_adv[:, :, :, i] = PGD(model, x[:, :, :, i], y[i]; ϵ = ϵ, loss=attack_loss, step_size=step_size, iterations=iterations)
+                # end
             else 
                 error("Unsupported attack method: $attack_method")
             end
@@ -75,6 +83,9 @@ function adversarial_train(model, x_train, y_train, epochs, batch_size, ϵ; loss
         println("Average loss: $avg_loss")
 
         push!(adv_losses, avg_loss)
+        
+        iter_val += iterations/epochs
+        iter = ceil(iter_val)
     end
 
     return adv_losses

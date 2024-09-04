@@ -8,7 +8,7 @@ include("utils.jl")
 # The black-box Square Attack developed by Andriuschenko et al. (https://link.springer.com/chapter/10.1007/978-3-030-58592-1_29)
 # The only free variable is the budget: iterations
 function SquareAttack(model, x, y, iterations; ϵ=0.3, p_init=0.8, min_label=0, max_label=9, verbose=false, clamp_range = (0, 1))
-    Random.seed!(0)
+    # Random.seed!(0)
     w, h, c = size(x)
     n_features = c*h*w
 
