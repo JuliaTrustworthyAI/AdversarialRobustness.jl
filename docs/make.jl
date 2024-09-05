@@ -30,8 +30,7 @@ using Pkg
 if any(contains.(ARGS, "--project"))
     @assert sum(contains.(ARGS, "--project")) == 1 "Only one environment can be specified using the `--project` argument."
     _path =
-        ARGS[findall(contains.(ARGS, "--project"))][1] |>
-        x -> replace(x, "--project=" => "")
+        (x -> replace(x, "--project=" => ""))(ARGS[findall(contains.(ARGS, "--project"))][1])
     Pkg.activate(_path)
 else
     Pkg.activate(@__DIR__)
@@ -46,7 +45,9 @@ end
 using AdversarialRobustness
 using Documenter
 
-DocMeta.setdocmeta!(AdversarialRobustness, :DocTestSetup, :(using AdversarialRobustness); recursive=true)
+DocMeta.setdocmeta!(
+    AdversarialRobustness, :DocTestSetup, :(using AdversarialRobustness); recursive=true
+)
 
 makedocs(;
     modules=[AdversarialRobustness],
@@ -57,12 +58,9 @@ makedocs(;
         edit_link="main",
         assets=String[],
     ),
-    pages=[
-        "Home" => "index.md",
-    ],
+    pages=["Home" => "index.md"],
 )
 
 deploydocs(;
-    repo="github.com/JuliaTrustworthyAI/AdversarialRobustness.jl",
-    devbranch="main",
+    repo="github.com/JuliaTrustworthyAI/AdversarialRobustness.jl", devbranch="main"
 )

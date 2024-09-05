@@ -33,7 +33,9 @@ target = 1
 # x_best_fgsm = FGSM(model, X_try, y_try; ϵ = 0.2)
 # x_best_pgd = PGD(model, X_try, y_try; ϵ = 0.3, step_size=0.02, iterations=40)
 # x_best_square, n_queries = SquareAttack(model, X_try, y_try, 5000; ϵ = 0.3, verbose=true)
-x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(model, X_try, y_try, 100; ϵ = 0.2, target=target)
+x_best_autopgd, η_list, checkpoints, starts_updated = AutoPGD(
+    model, X_try, y_try, 100; ϵ=0.2, target=target
+)
 
 println(extrema(x_best_autopgd .- X_try))
 
@@ -48,8 +50,8 @@ adv_img = attack_to_use[:, :, :, 1:1]
 clean_pred = model(clean_img)
 adv_pred = model(adv_img)
 
-clean_pred_label = (clean_pred |> Flux.onecold |> getindex) - 1
-adv_pred_label = (adv_pred |> Flux.onecold |> getindex) - 1
+clean_pred_label = (getindex(Flux.onecold(clean_pred))) - 1
+adv_pred_label = (getindex(Flux.onecold(adv_pred))) - 1
 true_label = y_try
 
 # println("η_list: ", η_list)

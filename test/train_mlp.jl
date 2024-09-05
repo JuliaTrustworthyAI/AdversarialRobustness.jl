@@ -24,7 +24,6 @@ opt_state = Flux.setup(rule, model)
 
         # Loop over different attack types:
         @testset "Using attack type $(attack_type)" begin
-
             _model = deepcopy(model)
 
             for data in train_set
@@ -48,7 +47,6 @@ opt_state = Flux.setup(rule, model)
 
             # Tests
             @test true
-
         end
-    end    
+    end
 end

@@ -5,13 +5,17 @@ using Flux: onehotbatch, onecold
 
 # White-box Fast Gradient Sign Method (FGSM) attack by Goodfellow et al. (arxiv.org/abs/1412.6572)
 # Code adapted from (github.com/jaypmorgan/Adversarial.jl)
-function FGSM(model, loss, x, y; ϵ = 0.3, min_label=0, max_label=9, clamp_range = (0, 1))
+function FGSM(model, loss, x, y; ϵ=0.3, min_label=0, max_label=9, clamp_range=(0, 1))
     batch_size = size(x)[4]
     x_adv = deepcopy(x)
-    for i = 1:batch_size
+    for i in 1:batch_size
         x_curr = x_adv[:, :, :, i]
         x_curr = reshape(x_curr, 28, 28, 1, 1)
-        grads = gradient(x_curr -> loss(model(x_curr), y[i]; min_label=min_label, max_label=max_label)[1], x_curr)[1]
+        grads = gradient(
+            x_curr ->
+                loss(model(x_curr), y[i]; min_label=min_label, max_label=max_label)[1],
+            x_curr,
+        )[1]
         x_curr_adv = clamp.(x_curr .+ (ϵ[i] .* sign.(grads)), clamp_range...)
         x_adv[:, :, :, i] = x_curr_adv
     end
@@ -20,16 +24,41 @@ end
 
 # White-box Projected Gradient Descent (PGD) attack by Madry et al. (arxiv.org/abs/1706.06083)
 # Code adapted from (github.com/jaypmorgan/Adversarial.jl)
-function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, min_label=0, max_label=9, clamp_range = (0, 1))
+function PGD(
+    model,
+    loss,
+    x,
+    y;
+    ϵ=0.3,
+    step_size=0.01,
+    iterations=40,
+    min_label=0,
+    max_label=9,
+    clamp_range=(0, 1),
+)
     batch_size = size(x)[4]
     x_adv = deepcopy(x)
-    for i = 1:batch_size
+    for i in 1:batch_size
         x_curr = x_adv[:, :, :, i]
         x_curr = reshape(x_curr, 28, 28, 1, 1)
-        x_curr_adv = clamp.(x_curr + (randn(Float32, size(x_curr)...) * Float32(step_size)), clamp_range...); # start from the random point
+        x_curr_adv =
+            clamp.(
+                x_curr + (randn(Float32, size(x_curr)...) * Float32(step_size)),
+                clamp_range...,
+            ) # start from the random point
         δ = chebyshev(x_curr, x_curr_adv)
-        iteration = 1; while (δ < ϵ) && iteration <= iterations
-            x_curr_adv = FGSM(model, loss, x_curr_adv, y; ϵ = step_size, min_label=min_label, max_label=max_label, clamp_range = clamp_range)
+        iteration = 1
+        while (δ < ϵ) && iteration <= iterations
+            x_curr_adv = FGSM(
+                model,
+                loss,
+                x_curr_adv,
+                y;
+                ϵ=step_size,
+                min_label=min_label,
+                max_label=max_label,
+                clamp_range=clamp_range,
+            )
             δ = chebyshev(x_curr, x_curr_adv)
             iteration += 1
         end
@@ -37,7 +66,6 @@ function PGD(model, loss, x, y; ϵ = 0.3, step_size = 0.01, iterations = 40, min
     end
     return x_adv
 end
-
 
 # Helper functions for the Square Attack
 
@@ -72,11 +100,11 @@ end
 
 # Margin loss: L(f(x̂), p) = fₚ(x̂) − max(fₖ(x̂)) s.t k≠p
 function margin_loss(logits, y, min_label, max_label)
-    y = onehotbatch(y, min_label:max_label) 
-    preds_correct_class = sum(logits.*y, dims=1)
+    y = onehotbatch(y, min_label:max_label)
+    preds_correct_class = sum(logits .* y; dims=1)
     diff = preds_correct_class .- logits
     diff[y] .= Inf
-    margin = minimum(diff, dims=1)
+    margin = minimum(diff; dims=1)
     return margin
 end
 
@@ -89,8 +117,18 @@ end
 # One of the conditions to apply the delta changes according to Andriuschenko et al. but not in advertorch
 # Commented out in the actual method
 # They describe it as: prevent trying out a delta if it doesn't change x_curr (e.g. an overlapping patch)
-function check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, s, c, i_img, clamp_range = (0, 1))
-    δ_window = δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
+function check_delta(
+    δ,
+    x_curr_window,
+    x_best_curr_window,
+    center_w,
+    center_h,
+    s,
+    c,
+    i_img,
+    clamp_range=(0, 1),
+)
+    δ_window = δ[center_w:(center_w + s - 1), center_h:(center_h + s - 1), :, i_img]
     clipped_window = clamp.(x_curr_window .+ δ_window, clamp_range...)
     difference = abs.(clipped_window .- x_best_curr_window)
     indices = findall(x -> x < 10^-7, difference)
@@ -99,13 +137,15 @@ end
 
 # The black-box Square Attack developed by Andriuschenko et al. (https://link.springer.com/chapter/10.1007/978-3-030-58592-1_29)
 # The only free variable is the budget: iterations
-function SquareAttack(model, x, y, iterations, ϵ, p_init, min_label, max_label, verbose; clamp_range = (0, 1))
+function SquareAttack(
+    model, x, y, iterations, ϵ, p_init, min_label, max_label, verbose; clamp_range=(0, 1)
+)
     Random.seed!(0)
     w, h, c, n_ex_total = size(x)
-    n_features = c*h*w
+    n_features = c * h * w
 
     # Initialization (stripes of +/-ϵ)
-    init_δ = rand(w, 1, c, n_ex_total) .|> x -> x < 0.5 ? -ϵ : ϵ
+    init_δ = (x -> x < 0.5 ? -ϵ : ϵ).(rand(w, 1, c, n_ex_total))
     init_δ_extended = repeat(init_δ, 1, h, 1, 1)
     x_best = clamp.((init_δ_extended + x), clamp_range...)
 
@@ -116,7 +156,7 @@ function SquareAttack(model, x, y, iterations, ϵ, p_init, min_label, max_label,
 
     times_it_actually_improved = 0
 
-    for iteration = 1:iterations
+    for iteration in 1:iterations
         idx_to_fool = findall(x -> margin_min[x] > 0, 1:n_ex_total) # attacking images that are predicted correctly
 
         if iteration == 1 && verbose
@@ -138,7 +178,7 @@ function SquareAttack(model, x, y, iterations, ϵ, p_init, min_label, max_label,
         δ = x_best_curr .- x_curr
 
         p = p_selection(p_init, iteration, iterations)
-        s = Int(round(sqrt(p * n_features/c)))
+        s = Int(round(sqrt(p * n_features / c)))
         s = min(max(s, 1), h)
 
         for i_img in idx_to_fool
@@ -149,7 +189,7 @@ function SquareAttack(model, x, y, iterations, ϵ, p_init, min_label, max_label,
             values = rand([-ϵ, ϵ], c)
 
             # -1 because 
-            δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img] .= values 
+            δ[center_w:(center_w + s - 1), center_h:(center_h + s - 1), :, i_img] .= values
 
             # In the SquareAttack paper's actual code but not in advertorch so commenting out for now
 
@@ -196,7 +236,7 @@ end
 function targeted_dlr_loss(logits, y, target)
     zy = logits[y, :]
     zt = logits[target, :]
-    sorted_logits = sort(logits, dims=1, rev=true)
+    sorted_logits = sort(logits; dims=1, rev=true)
     zπ1 = sorted_logits[1, :]
     zπ3 = sorted_logits[3, :]
     zπ4 = sorted_logits[4, :]
@@ -208,9 +248,9 @@ end
 # Returns indices for which the update step has increased f less than ρ * (total update steps since last checkpoint) times
 function condition_1(f_list, curr_checkpoint, prev_checkpoint, ρ, n_ex_total)
     update_freqs = zeros(Float64, n_ex_total)
-    for i = prev_checkpoint+1:curr_checkpoint-1
+    for i in (prev_checkpoint + 1):(curr_checkpoint - 1)
         for j in 1:n_ex_total
-            if f_list[i][j] > f_list[i-1][j]
+            if f_list[i][j] > f_list[i - 1][j]
                 update_freqs[j] += 1
             end
         end
@@ -224,21 +264,37 @@ end
 # Condition 2 to halve η and restart from best point
 # Returns indices for which no changes happened t 
 function condition_2(η_list, f_max_list, curr_ckp_idx, prev_ckp_idx, n_ex_total)
-    return findall(x -> (η_list[curr_ckp_idx][x] == η_list[prev_ckp_idx][x]) && (f_max_list[curr_ckp_idx][x] == f_max_list[prev_ckp_idx][x]), 1:n_ex_total)
+    return findall(
+        x ->
+            (η_list[curr_ckp_idx][x] == η_list[prev_ckp_idx][x]) &&
+                (f_max_list[curr_ckp_idx][x] == f_max_list[prev_ckp_idx][x]),
+        1:n_ex_total,
+    )
 end
-
 
 # White-box Auto Projected Gradient Descent: A parameter-free version of PGD (arxiv.org/pdf/2003.01690)
 # The only free parameter is the budget: iterations. α and ρ are both set to 0.75 as specified by the authors
 # Set a target value to perform the targeted APGD (with DLR loss). Set it to Nothing to perform untargeted APGD (with CE loss)
-function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=0.75, ρ=0.75, clamp_range = (0, 1))
+function AutoPGD(
+    model,
+    x,
+    y,
+    iterations,
+    ϵ,
+    min_label,
+    max_label,
+    verbose;
+    α=0.75,
+    ρ=0.75,
+    clamp_range=(0, 1),
+)
     w, h, c, n_ex_total = size(x)
 
     # initializing step size
     η = ones(Float64, n_ex_total) .* 2ϵ
     η_list = []
     push!(η_list, η)
-    
+
     # defining checkpoints
     p = [0, 0.22] # period lengths
     checkpoints = [1] # checkpoints for iterations
@@ -251,7 +307,16 @@ function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=
     end
 
     x_0 = deepcopy(x)
-    x_1 = FGSM(model, cross_entropy_loss, x_0, y; ϵ = η, min_label=min_label, max_label=max_label, clamp_range = clamp_range)
+    x_1 = FGSM(
+        model,
+        cross_entropy_loss,
+        x_0,
+        y;
+        ϵ=η,
+        min_label=min_label,
+        max_label=max_label,
+        clamp_range=clamp_range,
+    )
     f_0 = cross_entropy_loss(model(x_0), y; min_label=min_label, max_label=max_label)
     f_1 = cross_entropy_loss(model(x_1), y; min_label=min_label, max_label=max_label)
 
@@ -266,7 +331,7 @@ function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=
     for i in n_ex_total
         if f_max[i] == f_0[i]
             x_max[:, :, :, i] = x_0[:, :, :, i]
-        else 
+        else
             x_max[:, :, :, i] = x_1[:, :, :, i]
         end
     end
@@ -276,15 +341,30 @@ function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=
     push!(x_list, x_max)
 
     starts_updated = zeros(Float64, n_ex_total)
-    
-    for k = 2:iterations
+
+    for k in 2:iterations
         ηs = deepcopy(η_list[length(η_list)])
         x_k = deepcopy(x_list[k])
-        x_k_m_1 = deepcopy(x_list[k-1])
-        z_k_p_1 = FGSM(model, cross_entropy_loss, x_k, y; ϵ = ηs, min_label=min_label, max_label=max_label, clamp_range = clamp_range)
-        x_k_p_1 = clamp.((x_k + (α .* (z_k_p_1 .- x_k))) + ((1 - α) .* (x_k .- x_k_m_1)), clamp_range...)
+        x_k_m_1 = deepcopy(x_list[k - 1])
+        z_k_p_1 = FGSM(
+            model,
+            cross_entropy_loss,
+            x_k,
+            y;
+            ϵ=ηs,
+            min_label=min_label,
+            max_label=max_label,
+            clamp_range=clamp_range,
+        )
+        x_k_p_1 =
+            clamp.(
+                (x_k + (α .* (z_k_p_1 .- x_k))) + ((1 - α) .* (x_k .- x_k_m_1)),
+                clamp_range...,
+            )
 
-        f_x_k_p_1 = cross_entropy_loss(model(x_k_p_1), y; min_label=min_label, max_label=max_label)
+        f_x_k_p_1 = cross_entropy_loss(
+            model(x_k_p_1), y; min_label=min_label, max_label=max_label
+        )
         push!(f_list, f_x_k_p_1)
 
         # Updating maximum loss
@@ -301,9 +381,9 @@ function AutoPGD(model, x, y, iterations, ϵ, min_label, max_label, verbose; α=
 
         # Reached checkpoint: check if we need to halve η
         if k in checkpoints
-            curr_ckp_idx = findfirst(x -> x==k, checkpoints)
-            prev_checkpoint = checkpoints[curr_ckp_idx-1]
-            prev_ckp_idx = findfirst(x -> x==prev_checkpoint, checkpoints)
+            curr_ckp_idx = findfirst(x -> x == k, checkpoints)
+            prev_checkpoint = checkpoints[curr_ckp_idx - 1]
+            prev_ckp_idx = findfirst(x -> x == prev_checkpoint, checkpoints)
 
             cond_1 = condition_1(f_list, k, prev_checkpoint, ρ, n_ex_total)
             cond_2 = condition_2(η_list, f_max_list, curr_ckp_idx, prev_ckp_idx, n_ex_total)
