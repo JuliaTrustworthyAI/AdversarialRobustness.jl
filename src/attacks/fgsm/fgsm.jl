@@ -11,14 +11,14 @@ function FGSM(
     model,
     x,
     y;
-    loss = cross_entropy_loss,
+    loss = logitcrossentropy,
     ϵ = 0.3,
     clamp_range = (0, 1),
 )
     grads = gradient(
         x -> loss(model(x), y),
         x,
-    )[1]
-    x = clamp.(x .+ (ϵ .* sign.(grads)), clamp_range...)
+    )
+    x = clamp.(x .+ (ϵ .* sign.(grads[1])), clamp_range...)
     return x
 end
