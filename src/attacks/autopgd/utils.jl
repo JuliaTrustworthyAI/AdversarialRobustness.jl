@@ -7,9 +7,9 @@ using Flux: onehotbatch, onecold
 
 # Targeted Difference of Logits Ratio (DLR) loss
 function targeted_dlr_loss(logits, y, target)
-    zy = logits[y+1]
-    zt = logits[target+1]
-    sorted_logits = sort(reshape(logits, 10), rev = true)
+    zy = logits[y + 1]
+    zt = logits[target + 1]
+    sorted_logits = sort(reshape(logits, 10); rev=true)
     zπ1 = sorted_logits[1]
     zπ3 = sorted_logits[3]
     zπ4 = sorted_logits[4]
@@ -21,8 +21,8 @@ end
 # Returns indices for which the update step has increased f less than ρ * (total update steps since last checkpoint) times
 function condition_1(f_list, curr_checkpoint, prev_checkpoint, ρ)
     update_freqs = 0
-    for i = prev_checkpoint+1:curr_checkpoint-1
-        if f_list[i] > f_list[i-1]
+    for i in (prev_checkpoint + 1):(curr_checkpoint - 1)
+        if f_list[i] > f_list[i - 1]
             update_freqs += 1
         end
     end

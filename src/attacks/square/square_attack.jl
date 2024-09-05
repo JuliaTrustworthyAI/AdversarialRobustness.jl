@@ -11,20 +11,20 @@ function SquareAttack(
     model,
     x,
     y;
-    iterations = 10,
-    ϵ = 0.3,
-    p_init = 0.8,
-    min_label = 0,
-    max_label = 9,
-    verbose = false,
-    clamp_range = (0, 1),
-    loss = nothing,
+    iterations=10,
+    ϵ=0.3,
+    p_init=0.8,
+    min_label=0,
+    max_label=9,
+    verbose=false,
+    clamp_range=(0, 1),
+    loss=nothing,
 )
     Random.seed!(0)
     n_features = length(x)
 
     # Initialization (stripes of +/-ϵ)
-    init_δ = rand(w, 1, c) .|> x -> x < 0.5 ? -ϵ : ϵ
+    init_δ = (x -> x < 0.5 ? -ϵ : ϵ).(rand(w, 1, c))
     init_δ_extended = repeat(init_δ, 1, h, 1)
     x_best = clamp.((init_δ_extended + x), clamp_range...)
 
@@ -36,7 +36,7 @@ function SquareAttack(
     margin_min = margin_loss(logits, y, min_label, max_label)
     n_queries = 1
 
-    for iteration = 1:iterations
+    for iteration in 1:iterations
         fooled = margin_min[1] < 0
 
         if iteration == 1 && verbose
@@ -59,13 +59,13 @@ function SquareAttack(
         s = Int(round(sqrt(p * n_features / c)))
         s = min(max(s, 1), h)
 
-        center_h = rand(1:(h-s))
-        center_w = rand(1:(w-s))
+        center_h = rand(1:(h - s))
+        center_w = rand(1:(w - s))
 
         # values = rand([-2ϵ, 2ϵ], c)
         values = rand([-ϵ, ϵ], c)
 
-        δ[center_w:center_w+s-1, center_h:center_h+s-1, :] .= values
+        δ[center_w:(center_w + s - 1), center_h:(center_h + s - 1), :] .= values
 
         x_new = clamp.(x_curr .+ δ, clamp_range...)
 

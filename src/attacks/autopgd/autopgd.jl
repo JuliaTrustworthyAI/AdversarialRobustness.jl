@@ -11,14 +11,14 @@ function AutoPGD(
     x,
     y;
     iterations=10,
-    ϵ = 0.3,
-    target = -1,
-    min_label = 0,
-    max_label = 9,
-    α = 0.75,
-    ρ = 0.75,
-    clamp_range = (0, 1),
-    loss = nothing, 
+    ϵ=0.3,
+    target=-1,
+    min_label=0,
+    max_label=9,
+    α=0.75,
+    ρ=0.75,
+    clamp_range=(0, 1),
+    loss=nothing,
 )
 
     # initializing step size
@@ -32,7 +32,7 @@ function AutoPGD(
 
     while ceil(p[length(p)] * iterations) <= iterations
         last_p = p[length(p)]
-        penultimate_p = p[length(p)-1]
+        penultimate_p = p[length(p) - 1]
         push!(checkpoints, ceil(last_p * iterations) + 1)
         push!(p, last_p + max(last_p - penultimate_p - 0.03, 0.06))
     end
@@ -40,14 +40,7 @@ function AutoPGD(
     x_0 = deepcopy(x)
     x_1 =
         clamp.(
-            FGSM(
-                model,
-                x_0,
-                y;
-                loss = loss,
-                ϵ = η,
-                clamp_range = (x_0 .- ϵ, x_0 .+ ϵ),
-            ),
+            FGSM(model, x_0, y; loss=loss, ϵ=η, clamp_range=(x_0 .- ϵ, x_0 .+ ϵ)),
             clamp_range...,
         )
 
@@ -85,20 +78,13 @@ function AutoPGD(
 
     starts_updated = 0
 
-    for k = 2:iterations
+    for k in 2:iterations
         η = deepcopy(η_list[length(η_list)])
         x_k = deepcopy(x_list[k])
-        x_k_m_1 = deepcopy(x_list[k-1])
+        x_k_m_1 = deepcopy(x_list[k - 1])
         z_k_p_1 =
             clamp.(
-                FGSM(
-                    model,
-                    x_k,
-                    y;
-                    loss = loss,
-                    ϵ = η,
-                    clamp_range = (x_0 .- ϵ, x_0 .+ ϵ),
-                ),
+                FGSM(model, x_k, y; loss=loss, ϵ=η, clamp_range=(x_0 .- ϵ, x_0 .+ ϵ)),
                 clamp_range...,
             )
         x_k_p_1 =
@@ -137,7 +123,7 @@ function AutoPGD(
         # Reached checkpoint: check if we need to halve η
         if k in checkpoints
             curr_ckp_idx = findfirst(x -> x == k, checkpoints)
-            prev_checkpoint = checkpoints[curr_ckp_idx-1]
+            prev_checkpoint = checkpoints[curr_ckp_idx - 1]
             prev_ckp_idx = findfirst(x -> x == prev_checkpoint, checkpoints)
 
             cond_1 = condition_1(f_list, k, prev_checkpoint, ρ)
