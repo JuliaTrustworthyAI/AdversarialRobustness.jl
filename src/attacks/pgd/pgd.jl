@@ -11,30 +11,18 @@ function PGD(
     model,
     x,
     y;
-    loss = cross_entropy_loss,
-    ϵ = 0.3,
-    step_size = 0.01,
-    iterations = 40,
-    clamp_range = (0, 1),
+    loss=cross_entropy_loss,
+    ϵ=0.3,
+    step_size=0.01,
+    iterations=40,
+    clamp_range=(0, 1),
 )
-
-    xadv =
-        clamp.(
-            x + (randn(Float32, size(x)...) * Float32(step_size)),
-            clamp_range...,
-        )
+    xadv = clamp.(x + (randn(Float32, size(x)...) * Float32(step_size)), clamp_range...)
     iteration = 1
     δ = chebyshev(x, xadv)
 
     while (δ .< ϵ) && iteration <= iterations
-        xadv = FGSM(
-            model,
-            xadv,
-            y;
-            loss = loss,
-            ϵ = step_size,
-            clamp_range = clamp_range,
-        )
+        xadv = FGSM(model, xadv, y; loss=loss, ϵ=step_size, clamp_range=clamp_range)
         iteration += 1
         δ = chebyshev(x, xadv)
     end

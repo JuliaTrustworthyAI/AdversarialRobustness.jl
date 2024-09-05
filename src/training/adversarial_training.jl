@@ -9,16 +9,16 @@ function vanilla_train(
     y_train,
     max_epochs,
     batch_size;
-    loss = logitcrossentropy,
-    opt = Adam,
-    min_label = 0,
-    max_label = 9,
+    loss=logitcrossentropy,
+    opt=Adam,
+    min_label=0,
+    max_label=9,
 )
     θ = Flux.params(model)
     vanilla_losses = []
-    train_loader = DataLoader((x_train, y_train), batchsize = batch_size, shuffle = true)
+    train_loader = DataLoader((x_train, y_train); batchsize=batch_size, shuffle=true)
 
-    @showprogress for epoch = 1:max_epochs
+    @showprogress for epoch in 1:max_epochs
         println("Epoch: $epoch")
         epoch_loss = 0.0
 
@@ -50,20 +50,20 @@ function adversarial_train(
     epochs,
     batch_size,
     ϵ;
-    loss = logitcrossentropy,
-    opt = Adam,
-    step_size = 0.01,
-    iterations = 10,
-    attack_method = :FGSM,
-    min_label = 0,
-    max_label = 9,
-    clamp_range = (0, 1),
+    loss=logitcrossentropy,
+    opt=Adam,
+    step_size=0.01,
+    iterations=10,
+    attack_method=:FGSM,
+    min_label=0,
+    max_label=9,
+    clamp_range=(0, 1),
 )
     adv_losses = []
     θ = Flux.params(model)
-    train_loader = DataLoader((x_train, y_train), batchsize = batch_size, shuffle = true)
+    train_loader = DataLoader((x_train, y_train); batchsize=batch_size, shuffle=true)
 
-    @showprogress for epoch = 1:epochs
+    @showprogress for epoch in 1:epochs
         println("Epoch: $epoch")
         epoch_loss = 0.0
 
@@ -76,22 +76,22 @@ function adversarial_train(
                     model,
                     x,
                     y;
-                    loss = cross_entropy_loss,
-                    ϵ = ϵ,
-                    min_label = min_label,
-                    max_label = max_label,
-                    clamp_range = (0, 1),
+                    loss=cross_entropy_loss,
+                    ϵ=ϵ,
+                    min_label=min_label,
+                    max_label=max_label,
+                    clamp_range=(0, 1),
                 )
             elseif attack_method == :PGD
                 x_adv = PGD(
                     model,
                     x,
                     y;
-                    loss = cross_entropy_loss,
-                    ϵ = ϵ,
-                    min_label = 0,
-                    max_label = 9,
-                    clamp_range = (0, 1),
+                    loss=cross_entropy_loss,
+                    ϵ=ϵ,
+                    min_label=0,
+                    max_label=9,
+                    clamp_range=(0, 1),
                 )
             else
                 error("Unsupported attack method: $attack_method")
@@ -108,7 +108,6 @@ function adversarial_train(
 
             update!(opt, θ, grads)
             epoch_loss += (l_adv + l_nat)
-
         end
 
         avg_loss = epoch_loss / length(train_loader)

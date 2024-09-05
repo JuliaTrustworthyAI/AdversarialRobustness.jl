@@ -18,8 +18,7 @@ const available_attacks = [
 Attacks the `model` on input `x` with label `y` using the attack `type`.
 """
 function attack(type::Function, x, y, model, loss; kwargs...)
-    x = type(model, x, y; loss = loss, kwargs...) |>
-        xadv -> convert.(eltype(x), xadv)
+    x = (xadv -> convert.(eltype(x), xadv))(type(model, x, y; loss=loss, kwargs...))
     return x
 end
 
