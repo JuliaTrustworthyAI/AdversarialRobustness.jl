@@ -1,0 +1,5 @@
+[deps]
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+OneHotArrays = "0b1bfda6-eb8a-41d2-88d8-f5af5cad476f"
+TaijaData = "9d524318-b4e6-4a65-86d2-b2b72d07866c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

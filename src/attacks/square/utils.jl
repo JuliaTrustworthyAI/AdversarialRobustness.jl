@@ -36,18 +36,28 @@ end
 
 # Margin loss: L(f(x̂), p) = fₚ(x̂) − max(fₖ(x̂)) s.t k≠p
 function margin_loss(logits, y, min_label, max_label)
-    # y = onehotbatch(y, min_label:max_label) 
-    preds_correct_class = sum(logits.*y, dims=1)
+    y = onehotbatch(y, min_label:max_label)
+    preds_correct_class = sum(logits .* y, dims = 1)
     diff = preds_correct_class .- logits
     diff[y] .= Inf
-    margin = minimum(diff, dims=1)
+    margin = minimum(diff, dims = 1)
     return margin
 end
 
 # One of the conditions to apply the delta changes according to Andriuschenko et al. but not in advertorch
 # Commented out in the actual method
 # They describe it as: prevent trying out a delta if it doesn't change x_curr (e.g. an overlapping patch)
-function check_delta(δ, x_curr_window, x_best_curr_window, center_w, center_h, s, c, i_img, clamp_range = (0, 1))
+function check_delta(
+    δ,
+    x_curr_window,
+    x_best_curr_window,
+    center_w,
+    center_h,
+    s,
+    c,
+    i_img,
+    clamp_range = (0, 1),
+)
     δ_window = δ[center_w:center_w+s-1, center_h:center_h+s-1, :, i_img]
     clipped_window = clamp.(x_curr_window .+ δ_window, clamp_range...)
     difference = abs.(clipped_window .- x_best_curr_window)
