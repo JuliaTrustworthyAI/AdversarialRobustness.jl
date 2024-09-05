@@ -9,7 +9,7 @@ using Flux: onehotbatch, onecold
 function targeted_dlr_loss(logits, y, target)
     zy = logits[y+1]
     zt = logits[target+1]
-    sorted_logits = sort(reshape(logits, 10), rev=true)
+    sorted_logits = sort(reshape(logits, 10), rev = true)
     zπ1 = sorted_logits[1]
     zπ3 = sorted_logits[3]
     zπ4 = sorted_logits[4]
@@ -35,5 +35,6 @@ end
 # Condition 2 to halve η and restart from best point
 # Returns indices for which no changes happened t 
 function condition_2(η_list, f_max_list, curr_ckp_idx, prev_ckp_idx)
-    return (η_list[curr_ckp_idx] == η_list[prev_ckp_idx]) && (f_max_list[curr_ckp_idx] == f_max_list[prev_ckp_idx])
+    return (η_list[curr_ckp_idx] == η_list[prev_ckp_idx]) &&
+           (f_max_list[curr_ckp_idx] == f_max_list[prev_ckp_idx])
 end
