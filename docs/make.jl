@@ -29,8 +29,9 @@ end
 using Pkg
 if any(contains.(ARGS, "--project"))
     @assert sum(contains.(ARGS, "--project")) == 1 "Only one environment can be specified using the `--project` argument."
-    _path =
-        (x -> replace(x, "--project=" => ""))(ARGS[findall(contains.(ARGS, "--project"))][1])
+    _path = (x -> replace(x, "--project=" => ""))(
+        ARGS[findall(contains.(ARGS, "--project"))][1]
+    )
     Pkg.activate(_path)
 else
     Pkg.activate(@__DIR__)
