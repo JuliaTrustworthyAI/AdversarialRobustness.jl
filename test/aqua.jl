@@ -1,5 +1,4 @@
 using Aqua
-using RecipesBase
 
 @testset "Aqua.jl" begin
     # Ambiguities needs to be tested seperately until the bug in Aqua package (https://github.com/JuliaTesting/Aqua.jl/issues/77) is fixed
