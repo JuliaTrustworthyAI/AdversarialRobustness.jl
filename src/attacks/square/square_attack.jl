@@ -14,14 +14,12 @@ function SquareAttack(
     iterations = 10,
     ϵ = 0.3,
     p_init = 0.8,
-    min_label = 0,
-    max_label = 9,
     verbose = false,
-    clamp_range = (0, 1),
-    loss = nothing,
+    clamp_range = (0, 1)
 )
     Random.seed!(0)
     n_features = length(x)
+    w, h, c, _ = size(x)
 
     # Initialization (stripes of +/-ϵ)
     init_δ = rand(w, 1, c) .|> x -> x < 0.5 ? -ϵ : ϵ
@@ -29,11 +27,10 @@ function SquareAttack(
     x_best = clamp.((init_δ_extended + x), clamp_range...)
 
     topass_x_best = deepcopy(x_best)
-    topass_x_best = reshape(topass_x_best, size(x)..., 1)
 
     logits = model(topass_x_best)
-    loss_min = margin_loss(logits, y, min_label, max_label)
-    margin_min = margin_loss(logits, y, min_label, max_label)
+    loss_min = margin_loss(logits, y)
+    margin_min = margin_loss(logits, y)
     n_queries = 1
 
     for iteration = 1:iterations
@@ -70,11 +67,11 @@ function SquareAttack(
         x_new = clamp.(x_curr .+ δ, clamp_range...)
 
         topass_x_new = deepcopy(x_new)
-        topass_x_new = reshape(topass_x_new, size(x)..., 1)
+        # topass_x_new = reshape(topass_x_new, size(x)..., 1)
 
         logits = model(topass_x_new)
-        loss = margin_loss(logits, y_curr, min_label, max_label)
-        margin = margin_loss(logits, y_curr, min_label, max_label)
+        loss = margin_loss(logits, y_curr)
+        margin = margin_loss(logits, y_curr)
 
         if loss[1] < loss_min_curr[1]
             loss_min = loss
