@@ -1,7 +1,7 @@
 using Distributions
 using Random
 using Flux, Statistics, Distances
-using Flux: onehotbatch, onecold
+using Flux: onehotbatch, onecold, logitcrossentropy
 
 # include("../common_utils.jl")
 
@@ -11,7 +11,7 @@ function PGD(
     model,
     x,
     y;
-    loss = cross_entropy_loss,
+    loss = logitcrossentropy,
     ϵ = 0.3,
     step_size = 0.01,
     iterations = 40,
@@ -20,13 +20,14 @@ function PGD(
 
     xadv =
         clamp.(
-            x + (randn(Float32, size(x)...) * Float32(step_size)),
+            x + ((randn(Float32, size(x)...) |> gpu) * Float32(step_size)),
             clamp_range...,
         )
     iteration = 1
-    δ = chebyshev(x, xadv)
+    # δ = chebyshev(x, xadv)
+    # (δ .< ϵ) && 
 
-    while (δ .< ϵ) && iteration <= iterations
+    while iteration <= iterations
         xadv = FGSM(
             model,
             xadv,
@@ -36,7 +37,7 @@ function PGD(
             clamp_range = clamp_range,
         )
         iteration += 1
-        δ = chebyshev(x, xadv)
+        # δ = chebyshev(x, xadv)
     end
 
     return clamp.(xadv, x .- ϵ, x .+ ϵ)

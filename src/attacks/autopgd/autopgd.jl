@@ -115,7 +115,6 @@ function AutoPGD(
         topass_xkp1 = reshape(topass_xkp1, size(x)..., 1)
 
         logits_xkp1 = model(topass_xkp1)
-
         f_x_k_p_1 = logitcrossentropy(logits_xkp1, y)
 
         if target > -1
