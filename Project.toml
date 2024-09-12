@@ -21,6 +21,7 @@ Flux = "0.14.19"
 ProgressMeter = "1.10.2"
 Revise = "3.5.18"
 Statistics = "1.10"
+cuDNN = "1"
 julia = "1.10"
 
 [extras]
